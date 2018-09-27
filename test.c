@@ -6,6 +6,9 @@ int main() {
     SmContext* ctx = sm_context((SmGCConfig){ 64, 2, 64 });
     sm_register_builtins(ctx);
 
+    SmStackFrame frame;
+    sm_context_enter_frame(ctx, &frame, sm_string_from_cstring("test"), sm_value_nil());
+
     SmValue* form = sm_heap_root(&ctx->heap);
     sm_build_list(ctx, form,
         SmBuildCar, sm_value_word(sm_word(&ctx->words, sm_string_from_cstring("print"))),
@@ -40,8 +43,8 @@ int main() {
         printf("\n");
     }
 
-    printf("evaluating: ");
     *form = sm_value_word(sm_word(&ctx->words, sm_string_from_cstring("print")));
+    printf("evaluating: ");
     sm_print_value(stdout, *form);
     printf("\n");
 
@@ -55,9 +58,37 @@ int main() {
         printf("\n");
     }
 
+    *form = *res;
+    printf("evaluating: ");
+    sm_print_value(stdout, *form);
+    printf("\n");
+
+    err = sm_eval(ctx, *form, res);
+
+    if (err.code != SmErrorOk) {
+        sm_report_error(stdout, err);
+    } else {
+        printf("result: ");
+        sm_print_value(stdout, *res);
+        printf("\n");
+    }
+
+    printf("invoking lambda\n");
+    SmCons cons = { sm_value_number(sm_number_int(64)), sm_value_nil() };
+    err = sm_invoke_lambda(ctx, form->data.cons->cdr.data.cons, sm_value_cons(&cons), res);
+
+    if (err.code != SmErrorOk) {
+        sm_report_error(stdout, err);
+    } else {
+        printf("result: ");
+        sm_print_value(stdout, *res);
+        printf("\n");
+    }
+
     sm_heap_root_drop(&ctx->heap, ctx->frame, form);
     sm_heap_root_drop(&ctx->heap, ctx->frame, res);
 
+    sm_context_exit_frame(ctx);
     sm_context_drop(ctx);
     return 0;
 }
