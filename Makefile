@@ -54,7 +54,7 @@ $(BUILDDIR)/test : $(OBJS) $(LIBS) | $(DIRS)
 bin: $(BUILDDIR)/test
 
 $(SMLISPDIR)/build/libsmlisp.a: .FORCE
-	make -C $(SMLISPDIR)
+	make -C $(SMLISPDIR) lib
 
 clean:
 	$(RM) $(DIRS)
