@@ -1,6 +1,7 @@
 #include "smlisp.h"
 
 #include <stdio.h>
+#include <string.h>
 
 int main(int argc, char** argv) {
     SmContext* ctx = sm_context((SmGCConfig){ 64, 2, 64 });
@@ -10,6 +11,22 @@ int main(int argc, char** argv) {
     sm_context_enter_frame(ctx, &frame, sm_string_from_cstring("test"), sm_value_nil());
 
     SmValue* form = sm_heap_root(&ctx->heap);
+
+    // Test garbage collection for strings
+    char* str = sm_heap_alloc_string(&ctx->heap, ctx->frame, 10);
+    *form = sm_value_string((SmString){ str, 10 });
+    memcpy(str, "ciao bello", sizeof(char)*10);
+
+    printf("string: ");
+    sm_print_value(stdout, *form);
+
+    printf("\nobject count before collection: %zu\n", ctx->heap.gc.object_count);
+    sm_heap_gc(&ctx->heap, ctx->frame);
+    printf("- after first collection: %zu\n", ctx->heap.gc.object_count);
+    *form = sm_value_nil();
+    sm_heap_gc(&ctx->heap, ctx->frame);
+    printf("- after second collection: %zu\n", ctx->heap.gc.object_count);
+
     sm_build_list(ctx, form,
         SmBuildCar, sm_value_word(sm_word(&ctx->words, sm_string_from_cstring("print"))),
         SmBuildList,
