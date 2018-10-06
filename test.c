@@ -14,7 +14,7 @@ int main(int argc, char** argv) {
 
     // Test garbage collection for strings
     char* str = sm_heap_alloc_string(&ctx->heap, ctx->frame, 10);
-    *form = sm_value_string((SmString){ str, 10 });
+    *form = sm_value_string((SmString){ str, 10 }, str);
     memcpy(str, "ciao bello", sizeof(char)*10);
 
     printf("string: ");
