@@ -1,19 +1,23 @@
+;;; Broken, we need macros
+;;; does not capture scope
 (setq defun (lambda ('name . 'def)
   (set name (eval (cons 'lambda def)))))
 
-(defun while-impl ('cond . 'code)
-  (if (eval cond)
-    (progn
-      (setq while-impl-ret (eval (cons 'progn code)))
-      (eval (list* 'while-impl cond code)))
-    ;; else
-    while-impl-ret))
-
+;;; Also broken
+;;; code is not run in its own scope
 (defun while ('cond . 'code)
-  (let (while-impl-ret)
-    (eval (list* 'while-impl cond code))))
+  (let ((while-body (eval (list* 'lambda () code)))
+        while-impl
+        while-impl-ret)
+    (setq while-impl (lambda ('cond)
+      (if (eval cond)
+        (progn
+          (setq while-impl-ret (while-body))
+          (eval (list 'while-impl cond)))
+        ;; else
+        while-impl-ret)))
+    ;; run loop
+    (eval (list 'while-impl cond))))
 
 (defun rep (fn)
-  (eval (list 'lambda ''args
-    (list 'print
-      (list 'eval (list 'cons fn 'args))))))
+  (lambda 'args (eval (cons fn . args))))
