@@ -12,3 +12,8 @@
 (defun while ('cond . 'code)
   (let (while-impl-ret)
     (eval (list* 'while-impl cond code))))
+
+(defun rep (fn)
+  (eval (list 'lambda ''args
+    (list 'print
+      (list 'eval (list 'cons fn 'args))))))

@@ -28,18 +28,18 @@ int main(int argc, char** argv) {
     printf("- after second collection: %zu\n", ctx->heap.gc.object_count);
 
     sm_build_list(ctx, form,
-        SmBuildCar, sm_value_word(sm_word(&ctx->words, sm_string_from_cstring("print"))),
+        SmBuildCar, sm_value_symbol(sm_symbol(&ctx->symbols, sm_string_from_cstring("print"))),
         SmBuildList,
-            SmBuildCar, sm_value_word(sm_word(&ctx->words, sm_string_from_cstring("+"))),
+            SmBuildCar, sm_value_symbol(sm_symbol(&ctx->symbols, sm_string_from_cstring("+"))),
             SmBuildCar, sm_value_number(sm_number_int(1)),
             SmBuildCar, sm_value_number(sm_number_int(2)),
             SmBuildList,
-                SmBuildCar, sm_value_word(sm_word(&ctx->words, sm_string_from_cstring("*"))),
+                SmBuildCar, sm_value_symbol(sm_symbol(&ctx->symbols, sm_string_from_cstring("*"))),
                 SmBuildCar, sm_value_number(sm_number_int(3)),
                 SmBuildCar, sm_value_number(sm_number_int(4)),
                 SmBuildEnd,
             SmBuildList,
-                SmBuildCar, sm_value_word(sm_word(&ctx->words, sm_string_from_cstring("-"))),
+                SmBuildCar, sm_value_symbol(sm_symbol(&ctx->symbols, sm_string_from_cstring("-"))),
                 SmBuildCar, sm_value_number(sm_number_int(6)),
                 SmBuildEnd,
             SmBuildEnd,
@@ -60,7 +60,7 @@ int main(int argc, char** argv) {
         printf("\n");
     }
 
-    *form = sm_value_word(sm_word(&ctx->words, sm_string_from_cstring("print")));
+    *form = sm_value_symbol(sm_symbol(&ctx->symbols, sm_string_from_cstring("print")));
     printf("evaluating: ");
     sm_print_value(stdout, *form);
     printf("\n");
