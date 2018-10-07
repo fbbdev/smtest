@@ -3,8 +3,8 @@
 
 (defun while-impl ('cond . 'code)
   (if (eval cond)
-    (do
-      (setq while-impl-ret (eval (cons 'do code)))
+    (progn
+      (setq while-impl-ret (eval (cons 'progn code)))
       (eval (list* 'while-impl cond code)))
     ;; else
     while-impl-ret))
