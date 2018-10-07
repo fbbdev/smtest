@@ -8,24 +8,61 @@ int main(int argc, char** argv) {
     sm_register_builtins(ctx);
 
     SmStackFrame frame;
-    sm_context_enter_frame(ctx, &frame, sm_string_from_cstring("test"), sm_value_nil());
+    sm_context_enter_frame(ctx, &frame, sm_string_from_cstring("test"));
 
-    SmValue* form = sm_heap_root(&ctx->heap);
+    SmValue* form = sm_heap_root_value(&ctx->heap);
 
     // Test garbage collection for strings
-    char* str = sm_heap_alloc_string(&ctx->heap, ctx->frame, 10);
+    char* str = sm_heap_alloc_string(&ctx->heap, ctx, 10);
     *form = sm_value_string((SmString){ str, 10 }, str);
     memcpy(str, "ciao bello", sizeof(char)*10);
 
-    printf("string: ");
+    printf("string test: ");
     sm_print_value(stdout, *form);
 
     printf("\nobject count before collection: %zu\n", ctx->heap.gc.object_count);
-    sm_heap_gc(&ctx->heap, ctx->frame);
+    sm_heap_gc(&ctx->heap, ctx);
     printf("- after first collection: %zu\n", ctx->heap.gc.object_count);
     *form = sm_value_nil();
-    sm_heap_gc(&ctx->heap, ctx->frame);
+    sm_heap_gc(&ctx->heap, ctx);
     printf("- after second collection: %zu\n", ctx->heap.gc.object_count);
+
+    printf("\nscope test: ");
+
+    SmScope** scope = sm_heap_root_scope(&ctx->heap);
+    *scope = sm_heap_alloc_scope(&ctx->heap, ctx, NULL);
+
+    sm_scope_set(*scope, (SmSymbol) 0, sm_value_cons(sm_heap_alloc_cons(&ctx->heap, ctx)));
+    sm_scope_set(*scope, (SmSymbol) 1, sm_value_cons(sm_heap_alloc_cons(&ctx->heap, ctx)));
+
+    printf("%zu\n", sm_scope_size(*scope));
+
+    printf("variable 0: ");
+    sm_print_value(stdout, sm_scope_get(*scope, (SmSymbol) 0)->value);
+    printf("\nvariable 1: ");
+    sm_print_value(stdout, sm_scope_get(*scope, (SmSymbol) 1)->value);
+
+    printf("\nobject count before collection: %zu\n", ctx->heap.gc.object_count);
+
+    sm_heap_gc(&ctx->heap, ctx);
+    printf("- after first collection: %zu\n", ctx->heap.gc.object_count);
+
+    printf("variable 0: ");
+    sm_print_value(stdout, sm_scope_get(*scope, (SmSymbol) 0)->value);
+    printf("\nvariable 1: ");
+    sm_print_value(stdout, sm_scope_get(*scope, (SmSymbol) 1)->value);
+
+
+    sm_scope_delete(*scope, (SmSymbol) 0);
+    sm_heap_gc(&ctx->heap, ctx);
+    printf("\n- after second collection: %zu\n", ctx->heap.gc.object_count);
+
+    printf("variable 1: ");
+    sm_print_value(stdout, sm_scope_get(*scope, (SmSymbol) 1)->value);
+
+    sm_heap_root_scope_drop(&ctx->heap, ctx, scope);
+    sm_heap_gc(&ctx->heap, ctx);
+    printf("\n- after third collection: %zu\n\n", ctx->heap.gc.object_count);
 
     sm_build_list(ctx, form,
         SmBuildCar, sm_value_symbol(sm_symbol(&ctx->symbols, sm_string_from_cstring("print"))),
@@ -49,7 +86,7 @@ int main(int argc, char** argv) {
     sm_print_value(stdout, *form);
     printf("\n");
 
-    SmValue* res = sm_heap_root(&ctx->heap);
+    SmValue* res = sm_heap_root_value(&ctx->heap);
     SmError err = sm_eval(ctx, *form, res);
 
     if (!sm_is_ok(err)) {
@@ -85,14 +122,15 @@ int main(int argc, char** argv) {
     if (!sm_is_ok(err)) {
         sm_report_error(stdout, err);
     } else {
-        printf("result: ");
+        printf("result (function: %s): ", sm_value_is_function(*res) ? "true" : "false");
         sm_print_value(stdout, *res);
         printf("\n");
     }
 
-    printf("invoking lambda\n");
+    printf("invoking function: %.*s\n",
+        (int) form->data.function->args.name.length, form->data.function->args.name.data);
     SmCons cons = { sm_value_number(sm_number_int(64)), sm_value_nil() };
-    err = sm_invoke_lambda(ctx, form->data.cons->cdr.data.cons, sm_value_cons(&cons), res);
+    err = sm_function_invoke(form->data.function, ctx, sm_value_cons(&cons), res);
 
     if (!sm_is_ok(err)) {
         sm_report_error(stdout, err);
@@ -138,8 +176,8 @@ int main(int argc, char** argv) {
         }
     }
 
-    sm_heap_root_drop(&ctx->heap, ctx->frame, form);
-    sm_heap_root_drop(&ctx->heap, ctx->frame, res);
+    sm_heap_root_value_drop(&ctx->heap, ctx, form);
+    sm_heap_root_value_drop(&ctx->heap, ctx, res);
 
     sm_context_exit_frame(ctx);
     sm_context_drop(ctx);
