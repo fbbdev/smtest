@@ -20,4 +20,4 @@
     (eval (list 'while-impl cond))))
 
 (defun rep (fn)
-  (lambda 'args (eval (cons fn . args))))
+  (lambda args (print (eval (cons fn args)))))
