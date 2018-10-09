@@ -14,22 +14,34 @@ int main(int argc, char** argv) {
 
     // Test garbage collection for strings
     char* str = sm_heap_alloc_string(&ctx->heap, ctx, 10);
-    *form = sm_value_string((SmString){ str, 10 }, str);
+    *form = sm_value_string((SmString){ str, 10 }, NULL);
     memcpy(str, "ciao bello", sizeof(char)*10);
 
     printf("string test: ");
     sm_print_value(stdout, *form);
 
-    printf("\nobject count before collection: %zu\n", ctx->heap.gc.object_count);
+    printf("\n- object count before collection: %zu\n", ctx->heap.gc.object_count);
+
     sm_heap_gc(&ctx->heap, ctx);
     printf("- after first collection: %zu\n", ctx->heap.gc.object_count);
+
+    // Test interval gc
+    form->data.string.view.data += 5;
+    form->data.string.view.length -= 5;
+    printf("-- cutting string: ");
+    sm_print_value(stdout, *form);
+
+    sm_heap_gc(&ctx->heap, ctx);
+    printf("\n- after second collection: %zu\n", ctx->heap.gc.object_count);
+
     *form = sm_value_nil();
     sm_heap_gc(&ctx->heap, ctx);
-    printf("- after second collection: %zu\n", ctx->heap.gc.object_count);
+    printf("- after third collection: %zu\n", ctx->heap.gc.object_count);
 
+    // Test garbage collection for scopes
     printf("\nscope test: ");
 
-    SmScope** scope = sm_heap_root_scope(&ctx->heap);
+    SmScope** scope = (SmScope**) sm_heap_root(&ctx->heap);
     *scope = sm_heap_alloc_scope(&ctx->heap, ctx);
 
     sm_scope_set(*scope, (SmSymbol) 0, sm_value_cons(sm_heap_alloc_cons(&ctx->heap, ctx)));
@@ -37,19 +49,19 @@ int main(int argc, char** argv) {
 
     printf("%zu\n", sm_scope_size(*scope));
 
-    printf("variable 0: ");
+    printf("-- variable 0: ");
     sm_print_value(stdout, sm_scope_get(*scope, (SmSymbol) 0)->value);
-    printf("\nvariable 1: ");
+    printf("\n-- variable 1: ");
     sm_print_value(stdout, sm_scope_get(*scope, (SmSymbol) 1)->value);
 
-    printf("\nobject count before collection: %zu\n", ctx->heap.gc.object_count);
+    printf("\n- object count before collection: %zu\n", ctx->heap.gc.object_count);
 
     sm_heap_gc(&ctx->heap, ctx);
     printf("- after first collection: %zu\n", ctx->heap.gc.object_count);
 
-    printf("variable 0: ");
+    printf("-- variable 0: ");
     sm_print_value(stdout, sm_scope_get(*scope, (SmSymbol) 0)->value);
-    printf("\nvariable 1: ");
+    printf("\n-- variable 1: ");
     sm_print_value(stdout, sm_scope_get(*scope, (SmSymbol) 1)->value);
 
 
@@ -57,12 +69,42 @@ int main(int argc, char** argv) {
     sm_heap_gc(&ctx->heap, ctx);
     printf("\n- after second collection: %zu\n", ctx->heap.gc.object_count);
 
-    printf("variable 1: ");
+    printf("-- variable 1: ");
     sm_print_value(stdout, sm_scope_get(*scope, (SmSymbol) 1)->value);
 
-    sm_heap_root_scope_drop(&ctx->heap, ctx, scope);
+    sm_heap_root_drop(&ctx->heap, ctx, (void**) scope);
+    printf("\n- unref count after dropping root: %zu\n", ctx->heap.gc.unref_count);
     sm_heap_gc(&ctx->heap, ctx);
-    printf("\n- after third collection: %zu\n\n", ctx->heap.gc.object_count);
+    printf("- after third collection: %zu\n", ctx->heap.gc.object_count);
+
+    printf("\nsymbol test: ");
+    *form = sm_value_symbol(sm_heap_alloc_symbol(&ctx->heap, ctx));
+    sm_print_value(stdout, *form);
+
+    printf("\n- object count before collection: %zu\n", ctx->heap.gc.object_count);
+
+    sm_heap_gc(&ctx->heap, ctx);
+    printf("- after first collection: %zu\n", ctx->heap.gc.object_count);
+
+    *((SmString*) form->data.symbol) = sm_string_from_cstring("static!");
+    printf("-- with static string: ");
+    sm_print_value(stdout, *form);
+
+    sm_heap_gc(&ctx->heap, ctx);
+    printf("\n- after second collection: %zu\n", ctx->heap.gc.object_count);
+
+    str = sm_heap_alloc_string(&ctx->heap, ctx, 8);
+    *((SmString*) form->data.symbol) = (SmString){ str, 8 };
+    memcpy(str, "dynamic!", 8);
+    printf("-- with gc string: ");
+    sm_print_value(stdout, *form);
+
+    sm_heap_gc(&ctx->heap, ctx);
+    printf("\n- after third collection: %zu\n", ctx->heap.gc.object_count);
+
+    *form = sm_value_nil();
+    sm_heap_gc(&ctx->heap, ctx);
+    printf("- after fourth collection: %zu\n\n", ctx->heap.gc.object_count);
 
     sm_build_list(ctx, form,
         SmBuildCar, sm_value_symbol(sm_symbol(&ctx->symbols, sm_string_from_cstring("print"))),
