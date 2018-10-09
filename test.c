@@ -14,7 +14,7 @@ int main(int argc, char** argv) {
 
     // Test garbage collection for strings
     char* str = sm_heap_alloc_string(&ctx->heap, ctx, 10);
-    *form = sm_value_string((SmString){ str, 10 }, NULL);
+    *form = sm_value_string((SmString){ str, 10 });
     memcpy(str, "ciao bello", sizeof(char)*10);
 
     printf("string test: ");
@@ -26,8 +26,8 @@ int main(int argc, char** argv) {
     printf("- after first collection: %zu\n", ctx->heap.gc.object_count);
 
     // Test interval gc
-    form->data.string.view.data += 5;
-    form->data.string.view.length -= 5;
+    form->data.string.data += 5;
+    form->data.string.length -= 5;
     printf("-- cutting string: ");
     sm_print_value(stdout, *form);
 
