@@ -30,7 +30,7 @@ int main(int argc, char** argv) {
     printf("\nscope test: ");
 
     SmScope** scope = sm_heap_root_scope(&ctx->heap);
-    *scope = sm_heap_alloc_scope(&ctx->heap, ctx, NULL);
+    *scope = sm_heap_alloc_scope(&ctx->heap, ctx);
 
     sm_scope_set(*scope, (SmSymbol) 0, sm_value_cons(sm_heap_alloc_cons(&ctx->heap, ctx)));
     sm_scope_set(*scope, (SmSymbol) 1, sm_value_cons(sm_heap_alloc_cons(&ctx->heap, ctx)));
