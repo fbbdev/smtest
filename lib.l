@@ -1,20 +1,19 @@
 (setq defmacro (macro ('name . 'def)
-  (list 'setq name (cons 'macro def))))
+  `(setq ,name (macro . ,def))))
 
 (defmacro defun ('name . 'def)
-  (list 'setq name (cons 'lambda def)))
+  `(setq ,name (lambda . ,def)))
 
 (defmacro while ('cond . 'code)
   (let ((while-impl (gensym))
         (while-impl-ret (gensym)))
-    (list 'let (list while-impl while-impl-ret)
-      (list 'defun while-impl '()
-        (list 'if cond
-          (list 'progn
-            (list 'setq while-impl-ret (cons 'progn code))
-            (list while-impl))))
+    `(let (,while-impl ,while-impl-ret)
+      (defun ,while-impl ()
+        (if ,cond
+          (progn (setq ,while-impl-ret (progn . ,code)) (,while-impl))
+          ,while-impl-ret))
       ;; run loop
-      (list while-impl))))
+      (,while-impl))))
 
 (defun rep (fn)
   (lambda args (print (eval (cons fn args)))))
